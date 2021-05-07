@@ -42,7 +42,7 @@ app.use(session({
     saveUninitialized: true,
     cookie : {
         httpOnly: true,
-        maxAge:(1000 * 60)
+        maxAge:(1000 * 60 * 60)
     }
 }))
 
@@ -63,33 +63,51 @@ app.use(cors({
     credentials: true,
 }));
 
+app.get('/getSubjects', (req, res) => {
+    SQLConnection.connect(err => {
+        if(err) throw err
+        SQLConnection.execute(`SELECT name, proffesor FROM subjects`, (err, result, fields) => {
+            if(err) throw err
+
+            SQLConnection.unprepare(`SELECT * FROM subjects`)
+            res.json(result);                 
+        })
+    })
+})
+
+app.post('/addSubject', (req, res) => {
+    SQLConnection.connect(err => {
+        if(err) throw err
+        SQLConnection.execute('INSERT INTO subjects (name, proffesor) VALUES (?, ?)', [
+            req.body.subjectName,
+            req.body.proffesor
+        ], (err, result, fields) => {
+            if(err) throw err
+            SQLConnection.unprepare('INSERT INTO subjects (name, proffesor) VALUES (?, ?)')
+        })
+    })
+    res.json()
+})
+
 app.get('/isLogged', (req, res) => {
     if(req.session.user)
     {
-        console.log('false')
-        res.json(false);
+        let body = {
+            redirect: false,
+            userType: req.session.user.userType
+        }
+        res.json(body);
     }
     else
     {
-        console.log('true')
-        res.json(true);
+        let body = {
+            redirect: true,
+        }
+        res.json(body);
     }
 })
 
 app.post('/login', (req, res, next) => {  
-    /*
-    if(req.session.page_views)
-    {
-        req.session.page_views++;
-        console.log(req.session.page_views);
-    } else {
-        req.session.page_views = 1;
-    }
-    */
-
-  //  let prepareState = new mysql.PreparedStatement(SQLConnection);
-   // prepareState.input('index', mysql.String);
-
     SQLConnection.connect(err => {
         if(err) throw err
         SQLConnection.execute(`SELECT * FROM users WHERE BINARY userIndex = ? AND BINARY password = ?`, [
@@ -102,20 +120,15 @@ app.post('/login', (req, res, next) => {
             {
                 if(result[0].password == req.body.password && result[0].userIndex == req.body.index)
                 {
-                    req.session.user = result;
+                    req.session.user = result[0];
                     console.log(result);
 
                     SQLConnection.unprepare(`SELECT * FROM users WHERE BINARY userIndex = ? AND BINARY password = ?`)
-                    res.json(true);
-
-                    next()
+                    res.json(true);                 
                 }
             }
         })
-       // SQLConnection.close();
     })
-
-    //res.json(false)
 }) 
 
 app.listen(port, '192.168.55.105', () => {
