@@ -110,13 +110,14 @@ app.post('/addSemester', (req, res) => {
 app.post('/addSubject', (req, res) => {
     SQLConnection.connect(err => {
         if(err) throw err
-        SQLConnection.execute('INSERT INTO subjects (name, proffesor, subjectLength) VALUES (?, ?, ?)', [
+        SQLConnection.execute('INSERT INTO subjects (name, proffesor, subjectLength, color) VALUES (?, ?, ?, ?)', [
             req.body.name,
             req.body.proffesor,
-            req.body.subjectLength
+            req.body.subjectLength,
+            req.body.color
         ], (err, result, fields) => {
             if(err) throw err
-            SQLConnection.unprepare('INSERT INTO subjects (name, proffesor, subjectLength) VALUES (?, ?, ?)')
+            SQLConnection.unprepare('INSERT INTO subjects (name, proffesor, subjectLength, color) VALUES (?, ?, ?, ?)')
 
             res.json(result.insertId)
         })
@@ -140,22 +141,33 @@ app.get('/getSemesters', (req, res) => {
 })
 
 app.post('/addSubjectsToSemester', (req, res) => {
-    let values = [];
 
-    for(let i = 0; i < req.body.friday.length; ++i)
-    {
-        values.push([req.body.friday[i], true, i, req.body.semester, req.body.group])
-    }
-
-    for(let i = 0; i < req.body.saturday.length; ++i)
-    {
-        values.push([req.body.saturday[i], false, i, req.body.semester, req.body.group])
-    }
-
-    console.log(values)
-
-    SQLConnection.query('INSERT INTO `subjectsschedule` (subjectID, isFriday, subjectIndex, semester, `group`) VALUES ?', [values], (err) => {
+    SQLConnection.query('DELETE FROM `subjectsschedule` WHERE semester = ? AND `group` = ?', [
+        req.body.semester,
+        req.body.group
+    ],  (err) => {
         if (err) throw err;
+
+        if(req.body.friday.length != 0 && req.body.saturday.length != 0)
+        {
+            let values = [];
+
+            for(let i = 0; i < req.body.friday.length; ++i)
+            {
+                values.push([req.body.friday[i], true, i, req.body.semester, req.body.group])
+            }
+        
+            for(let i = 0; i < req.body.saturday.length; ++i)
+            {
+                values.push([req.body.saturday[i], false, i, req.body.semester, req.body.group])
+            }
+        
+            console.log(values)
+        
+            SQLConnection.query('INSERT INTO `subjectsschedule` (subjectID, isFriday, subjectIndex, semester, `group`) VALUES ?', [values], (err) => {
+                if (err) throw err;
+            })
+        }
     })
 
     res.json()
