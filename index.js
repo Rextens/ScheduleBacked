@@ -47,7 +47,7 @@ app.use(session({
 }))
 
 
-let SQLConnection = mysql.createConnection({
+let SQLConnection = mysql.createPool({
     user: process.env.DB_HOST,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME
@@ -63,86 +63,99 @@ app.use(cors({
     credentials: true,
 }));
 
-app.post('/getSubjectsForDate', (req, res) => {
-    console.log(req.session.user)
+app.get('/getSubjectsForProffesor', async (req, res) => {
 
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute('SELECT * FROM subjectsschedule, subjects WHERE `group` = ? AND `semester` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex', [
+    //SQLConnection.connect(err => {
+    //    if(err) throw err
+        await SQLConnection.execute('SELECT * FROM subjectsschedule, subjects WHERE `proffesor` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex', [
+            req.session.user.userIndex
+        ], (err, result, fields) => {
+            if(err) throw err
+
+  //          SQLConnection.unprepare('SELECT * FROM subjectsschedule, subjects WHERE `proffesor` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex')
+            res.json(result);                 
+        })
+    //})
+})
+
+app.post('/getSubjectsForDate', async (req, res) => {
+   // SQLConnection.connect(err => {
+   //     if(err) throw err
+        await SQLConnection.execute('SELECT * FROM subjectsschedule, subjects WHERE `group` = ? AND `semester` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex', [
             req.session.user.group,
             req.session.user.semester
         ], (err, result, fields) => {
             if(err) throw err
 
-            SQLConnection.unprepare('SELECT * FROM subjectsschedule, subjects WHERE `group` = ? AND `semester` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex')
+    //        SQLConnection.unprepare('SELECT * FROM subjectsschedule, subjects WHERE `group` = ? AND `semester` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex')
             res.json(result);                 
         })
-    })
+    //})
 })
 
-app.get('/getSubjects', (req, res) => {
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute(`SELECT * FROM subjects`, (err, result, fields) => {
+app.get('/getSubjects', async (req, res) => {
+   // SQLConnection.connect(err => {
+   //     if(err) throw err
+        await SQLConnection.execute(`SELECT * FROM subjects`, (err, result, fields) => {
             if(err) throw err
 
-            SQLConnection.unprepare(`SELECT * FROM subjects`)
+     //       SQLConnection.unprepare(`SELECT * FROM subjects`)
             res.json(result);                 
         })
-    })
+    //})
 })
 
-app.post('/addSemester', (req, res) => {
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute('INSERT INTO semesters (startDate, endDate) VALUES (?, ?)', [
+app.post('/addSemester', async (req, res) => {
+    //SQLConnection.connect(err => {
+    //    if(err) throw err
+        await SQLConnection.execute('INSERT INTO semesters (startDate, endDate) VALUES (?, ?)', [
             req.body.startDate,
             req.body.endDate,
         ], (err, result, fields) => {
             if(err) throw err
-            SQLConnection.unprepare('INSERT INTO semesters (startDate, endDate) VALUES (?, ?)')
+     //       SQLConnection.unprepare('INSERT INTO semesters (startDate, endDate) VALUES (?, ?)')
             
             res.json(result.insertId)
         })
-    })
+    //})
 })
 
-app.post('/addSubject', (req, res) => {
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute('INSERT INTO subjects (name, proffesor, subjectLength, color) VALUES (?, ?, ?, ?)', [
+app.post('/addSubject', async (req, res) => {
+    //SQLConnection.connect(err => {
+    //    if(err) throw err
+        await SQLConnection.execute('INSERT INTO subjects (name, proffesor, subjectLength, color) VALUES (?, ?, ?, ?)', [
             req.body.name,
             req.body.proffesor,
             req.body.subjectLength,
             req.body.color
         ], (err, result, fields) => {
             if(err) throw err
-            SQLConnection.unprepare('INSERT INTO subjects (name, proffesor, subjectLength, color) VALUES (?, ?, ?, ?)')
+    //        SQLConnection.unprepare('INSERT INTO subjects (name, proffesor, subjectLength, color) VALUES (?, ?, ?, ?)')
 
             res.json(result.insertId)
         })
-    })
+    //})
 })
 
-app.get('/getSemesters', (req, res) => {
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute(`SELECT * FROM semesters`, (err, result, fields) => {
+app.get('/getSemesters', async (req, res) => {
+   // SQLConnection.connect(err => {
+    //    if(err) throw err
+        await SQLConnection.execute(`SELECT * FROM semesters`, (err, result, fields) => {
             if(err) throw err
 
 //            let startDate = new Date(result[0].startDate);
 
 //            console.log(startDate.getMonth())
 
-            SQLConnection.unprepare(`SELECT * FROM semesters`)
+   //         SQLConnection.unprepare(`SELECT * FROM semesters`)
             res.json(result);                 
         })
-    })
+   // })
 })
 
-app.post('/addSubjectsToSemester', (req, res) => {
+app.post('/addSubjectsToSemester', async (req, res) => {
 
-    SQLConnection.query('DELETE FROM `subjectsschedule` WHERE semester = ? AND `group` = ?', [
+    await SQLConnection.query('DELETE FROM `subjectsschedule` WHERE semester = ? AND `group` = ?', [
         req.body.semester,
         req.body.group
     ],  (err) => {
@@ -162,8 +175,6 @@ app.post('/addSubjectsToSemester', (req, res) => {
                 values.push([req.body.saturday[i], false, i, req.body.semester, req.body.group])
             }
         
-            console.log(values)
-        
             SQLConnection.query('INSERT INTO `subjectsschedule` (subjectID, isFriday, subjectIndex, semester, `group`) VALUES ?', [values], (err) => {
                 if (err) throw err;
             })
@@ -173,32 +184,32 @@ app.post('/addSubjectsToSemester', (req, res) => {
     res.json()
 })
 
-app.post('/addGroups', (req, res) => {
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute('INSERT INTO `groups` (groupName) VALUES (?)', [
+app.post('/addGroups', async (req, res) => {
+  //  SQLConnection.connect(err => {
+ //       if(err) throw err
+        await SQLConnection.execute('INSERT INTO `groups` (groupName) VALUES (?)', [
             req.body.groupName
         ], (err, result, fields) => {
             if(err) throw err
-            SQLConnection.unprepare('INSERT INTO `groups` (groupName) VALUES (?)')
+     //       SQLConnection.unprepare('INSERT INTO `groups` (groupName) VALUES (?)')
         })
-    })
+    //})
     res.json()
 })
 
-app.get('/getGroups', (req, res) => {
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute('SELECT * FROM `groups`', (err, result, fields) => {
+app.get('/getGroups', async (req, res) => {
+    //SQLConnection.connect(err => {
+    //    if(err) throw err
+        await SQLConnection.execute('SELECT * FROM `groups`', (err, result, fields) => {
             if(err) throw err
 
-            SQLConnection.unprepare('SELECT * FROM `groups`')
+     //       SQLConnection.unprepare('SELECT * FROM `groups`')
             res.json(result);                 
         })
-    })
+    //})
 })
 
-app.get('/isLogged', (req, res) => {
+app.get('/isLogged', async (req, res) => {
     if(req.session.user)
     {
         let body = {
@@ -216,10 +227,10 @@ app.get('/isLogged', (req, res) => {
     }
 })
 
-app.post('/login', (req, res, next) => {  
-    SQLConnection.connect(err => {
-        if(err) throw err
-        SQLConnection.execute(`SELECT * FROM users WHERE BINARY userIndex = ? AND BINARY password = ?`, [
+app.post('/login', async (req, res, next) => {  
+   // SQLConnection.connect(err => {
+   //     if(err) throw err
+        await SQLConnection.execute(`SELECT * FROM users WHERE BINARY userIndex = ? AND BINARY password = ?`, [
             req.body.index,
             req.body.password
         ], (err, result, fields) => {
@@ -230,9 +241,8 @@ app.post('/login', (req, res, next) => {
                 if(result[0].password == req.body.password && result[0].userIndex == req.body.index)
                 {
                     req.session.user = result[0];
-                    console.log(result);
 
-                    SQLConnection.unprepare(`SELECT * FROM users WHERE BINARY userIndex = ? AND BINARY password = ?`)
+                   // SQLConnection.unprepare(`SELECT * FROM users WHERE BINARY userIndex = ? AND BINARY password = ?`)
 
                     let redirectData = {
                         redirect: true,
@@ -243,9 +253,62 @@ app.post('/login', (req, res, next) => {
                 }
             }
         })
-    })
-}) 
+   // })
+})
 
-app.listen(port, '192.168.55.109', () => {
+app.post('/loadSubjectsForDean', async (req, res) => {
+   // SQLConnection.connect(err => {
+   //     if(err) throw err
+        await SQLConnection.execute('SELECT * FROM subjectsschedule, subjects WHERE `group` = ? AND `semester` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex', [
+            req.body.group,
+            req.body.semester
+        ], (err, result, fields) => {
+            if(err) throw err
+
+            //SQLConnection.unprepare('SELECT * FROM subjectsschedule, subjects WHERE `group` = ? AND `semester` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex')
+            res.json(result);                 
+        })
+  //  })
+})
+
+app.post('/addTeacherNote', async (req, res) => {
+    await SQLConnection.execute('INSERT INTO `subjectchanges` (`index`, date, note) VALUES (?, ?, ?)', [
+        req.body.itemIndex,
+        req.body.chosenDate,
+        req.body.noteText
+    ], (err, result, fields) => {
+        if(err) throw err
+
+    })
+
+    res.json()
+})
+
+app.post('/loadNotes', async (req, res) => {
+    let finalResult = {
+        fridayNotes: [],
+        saturdayNotes: []
+    }
+
+    await SQLConnection.execute('SELECT * FROM `subjectchanges` WHERE `date` = ?', [
+        req.body.friday
+    ], (err, result, fields) => {
+        if(err) throw err
+
+        finalResult.fridayNotes = result
+
+        SQLConnection.execute('SELECT * FROM `subjectchanges` WHERE `date` = ?', [
+            req.body.saturday
+        ], (err, result, fields) => {
+            if(err) throw err
+    
+            finalResult.saturdayNotes = result
+
+            res.json(finalResult)
+        })
+    })
+})
+
+app.listen(port, '192.168.55.106', () => {
     console.log(`Works on port: ${port}`)
 })
