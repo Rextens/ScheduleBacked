@@ -120,9 +120,10 @@ app.post('/addSemester', async (req, res) => {
     {
         if(req.session.user.userType == 2)
         {
-            SQLConnection.execute('INSERT INTO semesters (startDate, endDate) VALUES (?, ?)', [
+            SQLConnection.execute('INSERT INTO semesters (startDate, endDate, name) VALUES (?, ?, ?)', [
                 req.body.startDate,
                 req.body.endDate,
+                req.body.name
             ], (err, result, fields) => {
                 if(err) throw err
                 
@@ -299,7 +300,7 @@ app.post('/addTeacherNote', async (req, res) => {
     {
         if(req.session.user.userType == 1)
         {
-            await SQLConnection.execute('INSERT INTO `subjectchanges` (`index`, `date`, `note`) VALUES (?, ?, ?)', [
+            SQLConnection.execute('INSERT INTO `subjectchanges` (`index`, `date`, `note`) VALUES (?, ?, ?) AS new ON DUPLICATE KEY UPDATE `note`= new.note', [
                 req.body.itemIndex,
                 req.body.chosenDate,
                 req.body.noteText
@@ -337,6 +338,36 @@ app.post('/loadNotes', async (req, res) => {
         })
     })
 })
+
+app.post('/setWeekDate', async (req, res) => {
+    if(req.session.user)
+    {
+        if(req.session.user.userType == 2)
+        {
+            SQLConnection.execute('INSERT IGNORE INTO `week` (`weekNumber`, `weekEndDate`) VALUES (?, ?)', [
+                req.body.number,
+                req.body.week
+            ])
+        }
+    }
+
+    res.json()
+})
+
+
+app.post('/loadWeekNumber', async (req, res) => {
+    
+    SQLConnection.execute('SELECT `weekNumber` FROM `week` WHERE `weekEndDate` < ? ORDER BY `weekNumber` LIMIT 1', [
+        req.body.date
+    ], (err, result, fields) => {
+        if(err) throw err
+    
+        res.json(result[0])
+    })
+})
+
+
+
 
 app.listen(port, '192.168.55.102', () => {
     console.log(`Works on port: ${port}`)
