@@ -178,24 +178,21 @@ app.post('/addSubjectsToSemester', (req, res) => {
             ],  (err) => {
                 if (err) throw err;
 
-                if(req.body.friday.length != 0 && req.body.saturday.length != 0)
-                {
-                    let values = [];
+                let values = [];
 
-                    for(let i = 0; i < req.body.friday.length; ++i)
-                    {
-                        values.push([req.body.friday[i], true, i, req.body.semester, req.body.group])
-                    }
-                
-                    for(let i = 0; i < req.body.saturday.length; ++i)
-                    {
-                        values.push([req.body.saturday[i], false, i, req.body.semester, req.body.group])
-                    }
-                    
-                    SQLConnection.query('INSERT INTO `subjectsschedule` (subjectID, isFriday, subjectIndex, semester, `group`) VALUES ?', [values], (err) => {
-                        if (err) throw err;
-                    })
+                for(let i = 0; i < req.body.friday.length; ++i)
+                {
+                    values.push([req.body.friday[i], true, i, req.body.semester, req.body.group])
                 }
+                
+                for(let i = 0; i < req.body.saturday.length; ++i)
+                {
+                    values.push([req.body.saturday[i], false, i, req.body.semester, req.body.group])
+                }
+
+                SQLConnection.query('INSERT INTO `subjectsschedule` (subjectID, isFriday, subjectIndex, semester, `group`) VALUES ?', [values], (err) => {
+                    if (err) throw err;
+                })
             })
         }
     }
@@ -295,16 +292,14 @@ app.post('/loadSubjectsForDean', async (req, res) => {
 })
 
 app.post('/addTeacherNote', async (req, res) => {
-
     if(req.session.user)
     {
         if(req.session.user.userType == 1)
         {
-            SQLConnection.execute('INSERT INTO `subjectchanges` (`index`, `date`, `note`, `inScheduleId`, `changer`) VALUES (?, ?, ?, ?, ?) AS new ON DUPLICATE KEY UPDATE `note`= new.note', [
+            SQLConnection.execute('INSERT INTO `subjectchanges` (`index`, `date`, `note`, `changer`) VALUES (?, ?, ?, ?) AS new ON DUPLICATE KEY UPDATE `note`= new.note', [
                 req.body.itemIndex,
                 req.body.chosenDate,
                 req.body.noteText,
-                req.body.inScheduleId,
                 req.session.user.userIndex
             ], (err, result, fields) => {
                 if(err) throw err
