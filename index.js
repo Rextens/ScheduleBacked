@@ -92,7 +92,7 @@ app.post('/getSubjectsForDate', async (req, res) => {
    
     if(req.session.user)
     {
-        SQLConnection.execute('SELECT * FROM subjectsschedule, subjects WHERE `group` = ? AND `semester` = ? AND subjectsschedule.subjectID = subjects.ID ORDER BY isFriday, subjectIndex', [
+        SQLConnection.execute('SELECT subjectsschedule.*, subjects.*, users.userName FROM subjectsschedule, subjects, users WHERE subjectsschedule.`group` = ? AND subjectsschedule.`semester` = ? AND subjectsschedule.subjectID = subjects.ID AND subjects.proffesor = users.userIndex ORDER BY isFriday, subjectIndex', [
             req.session.user.group,
             req.session.user.semester
         ], (err, result, fields) => {
@@ -300,10 +300,12 @@ app.post('/addTeacherNote', async (req, res) => {
     {
         if(req.session.user.userType == 1)
         {
-            SQLConnection.execute('INSERT INTO `subjectchanges` (`index`, `date`, `note`) VALUES (?, ?, ?) AS new ON DUPLICATE KEY UPDATE `note`= new.note', [
+            SQLConnection.execute('INSERT INTO `subjectchanges` (`index`, `date`, `note`, `inScheduleId`, `changer`) VALUES (?, ?, ?, ?, ?) AS new ON DUPLICATE KEY UPDATE `note`= new.note', [
                 req.body.itemIndex,
                 req.body.chosenDate,
-                req.body.noteText
+                req.body.noteText,
+                req.body.inScheduleId,
+                req.session.user.userIndex
             ], (err, result, fields) => {
                 if(err) throw err
 
@@ -321,14 +323,14 @@ app.post('/loadNotes', async (req, res) => {
     }
 
     SQLConnection.execute('SELECT * FROM `subjectchanges` WHERE `date` = ?', [
-        req.body.friday
+        req.body.friday,
     ], (err, result, fields) => {
         if(err) throw err
 
         finalResult.fridayNotes = result
 
         SQLConnection.execute('SELECT * FROM `subjectchanges` WHERE `date` = ?', [
-            req.body.saturday
+            req.body.saturday,
         ], (err, result, fields) => {
             if(err) throw err
     
@@ -366,9 +368,26 @@ app.post('/loadWeekNumber', async (req, res) => {
     })
 })
 
+app.get('/getProfessor', async (req, res) => {
+    if(req.session.user)
+    {
+        if(req.session.user.userType == 2)
+        {
+            SQLConnection.execute('SELECT userIndex, userName FROM users WHERE `userType` = 1', [
+                
+            ], (err, result) => {
+                console.log(result)
+
+                res.json(result)
+            })
+        }
+    }
+
+})
 
 
 
-app.listen(port, '192.168.55.102', () => {
+
+app.listen(port, '192.168.55.103', () => {
     console.log(`Works on port: ${port}`)
 })
